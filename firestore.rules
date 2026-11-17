@@ -1,0 +1,334 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Global default-deny safety net
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // --- Reusable Hardened Helpers ---
+    function isValidId(id) {
+      return id is string && id.size() >= 1 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isVerifiedEmail() {
+      return isSignedIn() && request.auth.token.email_verified == true;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    // Token-only admin check (safe for list queries - zero DB reads)
+    function isAdminToken() {
+      return isVerifiedEmail() && request.auth.token.email == 'sanayaikhom62@gmail.com';
+    }
+
+    // Full admin check for single-doc reads and writes
+    function isAdmin() {
+      return isAdminToken() || (isVerifiedEmail() && exists(/databases/$(database)/documents/admins/$(request.auth.uid)));
+    }
+
+    // --- Validation Blueprints ---
+    function isValidInventory(data) {
+      return data.keys().hasAll([
+        'name', 'brand', 'brandLabel', 'storage', 'color', 'condition',
+        'price', 'stock', 'status', 'accessories', 'imageUrl',
+        'isPublished', 'updatedBy', 'createdAt', 'updatedAt'
+      ]) &&
+      data.keys().hasOnly([
+        'name', 'brand', 'brandLabel', 'storage', 'color', 'condition',
+        'price', 'stock', 'status', 'accessories', 'imageUrl',
+        'isPublished', 'updatedBy', 'createdAt', 'updatedAt'
+      ]) &&
+      data.name is string && data.name.size() >= 2 && data.name.size() <= 100 &&
+      data.brand is string && data.brand in ['iphone', 'samsung', 'android'] &&
+      data.brandLabel is string && data.brandLabel.size() >= 2 && data.brandLabel.size() <= 40 &&
+      data.storage is string && data.storage.size() >= 2 && data.storage.size() <= 40 &&
+      data.color is string && data.color.size() >= 2 && data.color.size() <= 40 &&
+      data.condition is string && data.condition.size() >= 2 && data.condition.size() <= 80 &&
+      (data.price is int || data.price is float) && data.price >= 0 && data.price <= 10000000 &&
+      data.stock is int && data.stock >= 0 && data.stock <= 10000 &&
+      data.status is string && data.status in ['in_stock', 'low_stock', 'out_of_stock', 'reserved'] &&
+      data.accessories is string && data.accessories.size() <= 120 &&
+      data.imageUrl is string && data.imageUrl.size() >= 5 && data.imageUrl.size() <= 300 &&
+      data.isPublished is bool &&
+      isValidId(data.updatedBy) && data.updatedBy == request.auth.uid &&
+      data.createdAt is timestamp &&
+      data.updatedAt is timestamp;
+    }
+
+    function isValidBooking(data) {
+      return data.keys().hasAll([
+        'userId', 'customerName', 'customerPhone', 'bookingType',
+        'deviceId', 'deviceTitle', 'brandCategory', 'tradeInDevice',
+        'estimatedValue', 'appointmentDate', 'timeSlot', 'notes',
+        'status', 'createdAt', 'updatedAt'
+      ]) &&
+      data.keys().hasOnly([
+        'userId', 'customerName', 'customerPhone', 'bookingType',
+        'deviceId', 'deviceTitle', 'brandCategory', 'tradeInDevice',
+        'estimatedValue', 'appointmentDate', 'timeSlot', 'notes',
+        'status', 'createdAt', 'updatedAt'
+      ]) &&
+      isValidId(data.userId) &&
+      data.customerName is string && data.customerName.size() >= 2 && data.customerName.size() <= 80 &&
+      data.customerPhone is string && data.customerPhone.size() >= 7 && data.customerPhone.size() <= 20 &&
+      data.bookingType is string && data.bookingType in ['buy_reserve', 'sell_device', 'exchange_upgrade', 'store_visit'] &&
+      data.deviceId is string && data.deviceId.size() <= 128 &&
+      data.deviceTitle is string && data.deviceTitle.size() <= 120 &&
+      data.brandCategory is string && data.brandCategory in ['iphone', 'samsung', 'android', 'general'] &&
+      data.tradeInDevice is string && data.tradeInDevice.size() <= 120 &&
+      (data.estimatedValue is int || data.estimatedValue is float) && data.estimatedValue >= 0 && data.estimatedValue <= 10000000 &&
+      data.appointmentDate is string && data.appointmentDate.size() >= 10 && data.appointmentDate.size() <= 20 &&
+      data.appointmentDate.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}$') &&
+      data.timeSlot is string && data.timeSlot.size() >= 3 && data.timeSlot.size() <= 40 &&
+      data.notes is string && data.notes.size() <= 400 &&
+      data.status is string && data.status in ['pending', 'confirmed', 'completed', 'cancelled'] &&
+      data.createdAt is timestamp &&
+      data.updatedAt is timestamp;
+    }
+
+    function isValidBookingMetric(data) {
+      return data.keys().hasAll([
+        'userId', 'bookingType', 'brandCategory', 'deviceTitle',
+        'estimatedValue', 'appointmentDate', 'timeSlot', 'status',
+        'isPublicMetric', 'createdAt', 'updatedAt'
+      ]) &&
+      data.keys().hasOnly([
+        'userId', 'bookingType', 'brandCategory', 'deviceTitle',
+        'estimatedValue', 'appointmentDate', 'timeSlot', 'status',
+        'isPublicMetric', 'createdAt', 'updatedAt'
+      ]) &&
+      isValidId(data.userId) &&
+      data.bookingType is string && data.bookingType in ['buy_reserve', 'sell_device', 'exchange_upgrade', 'store_visit'] &&
+      data.brandCategory is string && data.brandCategory in ['iphone', 'samsung', 'android', 'general'] &&
+      data.deviceTitle is string && data.deviceTitle.size() <= 120 &&
+      (data.estimatedValue is int || data.estimatedValue is float) && data.estimatedValue >= 0 && data.estimatedValue <= 10000000 &&
+      data.appointmentDate is string && data.appointmentDate.size() >= 10 && data.appointmentDate.size() <= 20 &&
+      data.appointmentDate.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}$') &&
+      data.timeSlot is string && data.timeSlot.size() >= 3 && data.timeSlot.size() <= 40 &&
+      data.status is string && data.status in ['pending', 'confirmed', 'completed', 'cancelled'] &&
+      data.isPublicMetric == true &&
+      data.createdAt is timestamp &&
+      data.updatedAt is timestamp;
+    }
+
+    function isValidUserProfile(data) {
+      return data.keys().hasAll([
+        'uid', 'displayName', 'avatarInitials', 'role', 'isPublicProfile',
+        'totalBookings', 'completedBookings', 'cancelledBookings',
+        'tradeInCount', 'totalProjectedValue', 'preferredBrand',
+        'lastActiveAt', 'createdAt', 'updatedAt'
+      ]) &&
+      data.keys().hasOnly([
+        'uid', 'displayName', 'avatarInitials', 'role', 'isPublicProfile',
+        'totalBookings', 'completedBookings', 'cancelledBookings',
+        'tradeInCount', 'totalProjectedValue', 'preferredBrand',
+        'lastActiveAt', 'createdAt', 'updatedAt'
+      ]) &&
+      isValidId(data.uid) &&
+      data.displayName is string && data.displayName.size() >= 1 && data.displayName.size() <= 80 &&
+      data.avatarInitials is string && data.avatarInitials.size() >= 1 && data.avatarInitials.size() <= 4 &&
+      data.role is string && data.role in ['customer', 'admin'] &&
+      data.isPublicProfile == true &&
+      data.totalBookings is int && data.totalBookings >= 0 && data.totalBookings <= 100000 &&
+      data.completedBookings is int && data.completedBookings >= 0 && data.completedBookings <= 100000 &&
+      data.cancelledBookings is int && data.cancelledBookings >= 0 && data.cancelledBookings <= 100000 &&
+      data.tradeInCount is int && data.tradeInCount >= 0 && data.tradeInCount <= 100000 &&
+      (data.totalProjectedValue is int || data.totalProjectedValue is float) && data.totalProjectedValue >= 0 && data.totalProjectedValue <= 100000000 &&
+      data.preferredBrand is string && data.preferredBrand in ['all', 'iphone', 'samsung', 'android'] &&
+      data.lastActiveAt is timestamp &&
+      data.createdAt is timestamp &&
+      data.updatedAt is timestamp;
+    }
+
+    function isValidUserPrivate(data) {
+      return data.keys().hasAll(['uid', 'email', 'phone', 'createdAt', 'updatedAt']) &&
+      data.keys().hasOnly(['uid', 'email', 'phone', 'createdAt', 'updatedAt']) &&
+      isValidId(data.uid) &&
+      data.email is string && data.email.size() >= 3 && data.email.size() <= 160 &&
+      data.phone is string && data.phone.size() <= 20 &&
+      data.createdAt is timestamp &&
+      data.updatedAt is timestamp;
+    }
+
+    function isValidAdminRecord(data) {
+      return data.keys().hasAll(['uid', 'grantedAt']) &&
+      data.keys().hasOnly(['uid', 'grantedAt']) &&
+      isValidId(data.uid) &&
+      data.grantedAt is timestamp;
+    }
+
+    // --- Collection Rules ---
+
+    // 1. Inventory Catalog
+    match /inventory/{itemId} {
+      allow get: if isValidId(itemId) && (resource == null || resource.data.isPublished == true || isAdmin());
+      allow list: if resource.data.isPublished == true || isAdminToken();
+      allow create: if isAdmin() && isValidId(itemId) && isValidInventory(incoming()) &&
+        incoming().createdAt == request.time &&
+        incoming().updatedAt == request.time;
+      allow update: if isAdmin() && isValidId(itemId) && isValidInventory(incoming()) &&
+        incoming().createdAt == existing().createdAt &&
+        incoming().updatedAt == request.time;
+      allow delete: if isAdmin() && isValidId(itemId);
+    }
+
+    // 2. Customer Bookings (PII isolated to owner & admin)
+    match /bookings/{bookingId} {
+      allow get: if isSignedIn() && isValidId(bookingId) && (isAdmin() || (resource != null && resource.data.userId == request.auth.uid));
+      allow list: if isSignedIn() && (resource.data.userId == request.auth.uid || isAdminToken());
+
+      allow create: if isVerifiedEmail() && isValidId(bookingId) && isValidBooking(incoming()) &&
+        incoming().userId == request.auth.uid &&
+        incoming().status == 'pending' &&
+        incoming().createdAt == request.time &&
+        incoming().updatedAt == request.time;
+
+      allow update: if isVerifiedEmail() && isValidId(bookingId) && isValidBooking(incoming()) &&
+        incoming().userId == existing().userId &&
+        incoming().createdAt == existing().createdAt &&
+        incoming().updatedAt == request.time &&
+        (
+          (
+            isAdmin() &&
+            incoming().diff(existing()).affectedKeys().hasOnly(['status', 'estimatedValue', 'notes', 'appointmentDate', 'timeSlot', 'updatedAt'])
+          ) ||
+          (
+            existing().userId == request.auth.uid &&
+            existing().status in ['pending', 'confirmed'] &&
+            incoming().status == 'cancelled' &&
+            incoming().diff(existing()).affectedKeys().hasOnly(['status', 'updatedAt'])
+          )
+        );
+
+      allow delete: if isAdmin() && isValidId(bookingId);
+    }
+
+    // 3. Public Non-PII Booking Analytics Metrics
+    match /booking_metrics/{bookingId} {
+      allow get: if isSignedIn() && isValidId(bookingId) && (resource == null || resource.data.isPublicMetric == true);
+      allow list: if isSignedIn() && resource.data.isPublicMetric == true;
+
+      allow create: if isVerifiedEmail() && isValidId(bookingId) && isValidBookingMetric(incoming()) &&
+        incoming().userId == request.auth.uid &&
+        incoming().status == 'pending' &&
+        incoming().createdAt == request.time &&
+        incoming().updatedAt == request.time &&
+        existsAfter(/databases/$(database)/documents/bookings/$(bookingId));
+
+      allow update: if isVerifiedEmail() && isValidId(bookingId) && isValidBookingMetric(incoming()) &&
+        incoming().userId == existing().userId &&
+        incoming().createdAt == existing().createdAt &&
+        incoming().updatedAt == request.time &&
+        (
+          (
+            isAdmin() &&
+            incoming().diff(existing()).affectedKeys().hasOnly(['status', 'estimatedValue', 'appointmentDate', 'timeSlot', 'updatedAt'])
+          ) ||
+          (
+            existing().userId == request.auth.uid &&
+            existing().status in ['pending', 'confirmed'] &&
+            incoming().status == 'cancelled' &&
+            incoming().diff(existing()).affectedKeys().hasOnly(['status', 'updatedAt'])
+          )
+        );
+
+      allow delete: if isAdmin() && isValidId(bookingId);
+    }
+
+    // 4. Non-PII Registered User Analytics Directory
+    match /user_profiles/{userId} {
+      allow get: if isSignedIn() && isValidId(userId) && (isOwner(userId) || resource == null || resource.data.isPublicProfile == true);
+      allow list: if isSignedIn() && resource.data.isPublicProfile == true;
+
+      allow create: if isVerifiedEmail() && isValidId(userId) && isOwner(userId) &&
+        isValidUserProfile(incoming()) &&
+        incoming().uid == userId &&
+        (incoming().role == 'customer' || isAdmin()) &&
+        incoming().totalBookings == 0 &&
+        incoming().completedBookings == 0 &&
+        incoming().cancelledBookings == 0 &&
+        incoming().tradeInCount == 0 &&
+        incoming().totalProjectedValue == 0 &&
+        incoming().createdAt == request.time &&
+        incoming().updatedAt == request.time &&
+        incoming().lastActiveAt == request.time;
+
+      allow update: if isVerifiedEmail() && isValidId(userId) &&
+        isValidUserProfile(incoming()) &&
+        incoming().uid == existing().uid &&
+        incoming().createdAt == existing().createdAt &&
+        incoming().updatedAt == request.time &&
+        (
+          isAdmin() ||
+          (
+            isOwner(userId) &&
+            incoming().role == existing().role &&
+            (
+              incoming().diff(existing()).affectedKeys().hasOnly(['displayName', 'avatarInitials', 'preferredBrand', 'lastActiveAt', 'updatedAt']) ||
+              (
+                incoming().diff(existing()).affectedKeys().hasOnly(['totalBookings', 'tradeInCount', 'totalProjectedValue', 'lastActiveAt', 'updatedAt']) &&
+                incoming().totalBookings == existing().totalBookings + 1 &&
+                incoming().tradeInCount >= existing().tradeInCount &&
+                incoming().tradeInCount <= existing().tradeInCount + 1 &&
+                incoming().totalProjectedValue >= existing().totalProjectedValue
+              ) ||
+              (
+                incoming().diff(existing()).affectedKeys().hasOnly(['cancelledBookings', 'lastActiveAt', 'updatedAt']) &&
+                incoming().cancelledBookings == existing().cancelledBookings + 1
+              )
+            )
+          )
+        );
+
+      allow delete: if isAdmin() && isValidId(userId);
+    }
+
+    // 5. Strictly Isolated User PII
+    match /user_private/{userId} {
+      allow get: if isSignedIn() && isValidId(userId) && (isOwner(userId) || isAdmin());
+      allow list: if isSignedIn() && (resource.data.uid == request.auth.uid || isAdminToken());
+
+      allow create: if isVerifiedEmail() && isValidId(userId) && (isOwner(userId) || isAdmin()) &&
+        isValidUserPrivate(incoming()) &&
+        incoming().uid == userId &&
+        incoming().createdAt == request.time &&
+        incoming().updatedAt == request.time;
+
+      allow update: if isVerifiedEmail() && isValidId(userId) && (isOwner(userId) || isAdmin()) &&
+        isValidUserPrivate(incoming()) &&
+        incoming().uid == existing().uid &&
+        incoming().createdAt == existing().createdAt &&
+        incoming().updatedAt == request.time &&
+        incoming().diff(existing()).affectedKeys().hasOnly(['phone', 'email', 'updatedAt']);
+
+      allow delete: if isAdmin() && isValidId(userId);
+    }
+
+    // 6. Store Admin Registry
+    match /admins/{userId} {
+      allow get: if isSignedIn() && isValidId(userId) && (isOwner(userId) || isAdminToken());
+      allow list: if false;
+      allow create: if isAdminToken() && isValidId(userId) && isValidAdminRecord(incoming()) &&
+        incoming().uid == userId &&
+        incoming().grantedAt == request.time;
+      allow update: if false;
+      allow delete: if isAdminToken() && isValidId(userId);
+    }
+  }
+}

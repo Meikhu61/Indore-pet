@@ -1,0 +1,6 @@
+{
+  "name": "A1 MOBILE",
+  "description": "A1 MOBILE (@a1_mobile_checkon) — Buy, sell, and exchange certified smartphones with live bookings, editable inventory management, and real-time analytics.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

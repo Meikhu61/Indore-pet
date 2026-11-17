@@ -1,0 +1,415 @@
+{
+  "entities": {
+    "InventoryItem": {
+      "title": "InventoryItem",
+      "description": "Smartphone unit listed in A1 MOBILE store inventory",
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 2,
+          "maxLength": 100,
+          "description": "Device model title"
+        },
+        "brand": {
+          "type": "string",
+          "enum": ["iphone", "samsung", "android"],
+          "description": "Normalized brand category"
+        },
+        "brandLabel": {
+          "type": "string",
+          "minLength": 2,
+          "maxLength": 40,
+          "description": "Human-readable brand name"
+        },
+        "storage": {
+          "type": "string",
+          "minLength": 2,
+          "maxLength": 40,
+          "description": "Storage capacity e.g. 256GB"
+        },
+        "color": {
+          "type": "string",
+          "minLength": 2,
+          "maxLength": 40,
+          "description": "Device finish color"
+        },
+        "condition": {
+          "type": "string",
+          "minLength": 2,
+          "maxLength": 80,
+          "description": "Condition and battery health summary"
+        },
+        "price": {
+          "type": "number",
+          "description": "Selling price in INR"
+        },
+        "stock": {
+          "type": "integer",
+          "description": "Units available in stock"
+        },
+        "status": {
+          "type": "string",
+          "enum": ["in_stock", "low_stock", "out_of_stock", "reserved"],
+          "description": "Availability status"
+        },
+        "accessories": {
+          "type": "string",
+          "maxLength": 120,
+          "description": "Included box, bill, or cable details"
+        },
+        "imageUrl": {
+          "type": "string",
+          "minLength": 5,
+          "maxLength": 300,
+          "description": "Local or verified asset URL"
+        },
+        "isPublished": {
+          "type": "boolean",
+          "description": "Whether item is visible on public storefront"
+        },
+        "updatedBy": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$",
+          "description": "UID of admin who last updated the item"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "name",
+        "brand",
+        "brandLabel",
+        "storage",
+        "color",
+        "condition",
+        "price",
+        "stock",
+        "status",
+        "accessories",
+        "imageUrl",
+        "isPublished",
+        "updatedBy",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "Booking": {
+      "title": "Booking",
+      "description": "Customer appointment, device reservation, or sell/exchange inspection booking",
+      "type": "object",
+      "properties": {
+        "userId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "customerName": {
+          "type": "string",
+          "minLength": 2,
+          "maxLength": 80
+        },
+        "customerPhone": {
+          "type": "string",
+          "minLength": 7,
+          "maxLength": 20
+        },
+        "bookingType": {
+          "type": "string",
+          "enum": ["buy_reserve", "sell_device", "exchange_upgrade", "store_visit"]
+        },
+        "deviceId": {
+          "type": "string",
+          "maxLength": 128
+        },
+        "deviceTitle": {
+          "type": "string",
+          "maxLength": 120
+        },
+        "brandCategory": {
+          "type": "string",
+          "enum": ["iphone", "samsung", "android", "general"]
+        },
+        "tradeInDevice": {
+          "type": "string",
+          "maxLength": 120
+        },
+        "estimatedValue": {
+          "type": "number"
+        },
+        "appointmentDate": {
+          "type": "string",
+          "minLength": 10,
+          "maxLength": 20,
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+        },
+        "timeSlot": {
+          "type": "string",
+          "minLength": 3,
+          "maxLength": 40
+        },
+        "notes": {
+          "type": "string",
+          "maxLength": 400
+        },
+        "status": {
+          "type": "string",
+          "enum": ["pending", "confirmed", "completed", "cancelled"]
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "userId",
+        "customerName",
+        "customerPhone",
+        "bookingType",
+        "deviceId",
+        "deviceTitle",
+        "brandCategory",
+        "tradeInDevice",
+        "estimatedValue",
+        "appointmentDate",
+        "timeSlot",
+        "notes",
+        "status",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "BookingMetric": {
+      "title": "BookingMetric",
+      "description": "Non-PII real-time analytics projection of a booking for dashboard charts",
+      "type": "object",
+      "properties": {
+        "userId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "bookingType": {
+          "type": "string",
+          "enum": ["buy_reserve", "sell_device", "exchange_upgrade", "store_visit"]
+        },
+        "brandCategory": {
+          "type": "string",
+          "enum": ["iphone", "samsung", "android", "general"]
+        },
+        "deviceTitle": {
+          "type": "string",
+          "maxLength": 120
+        },
+        "estimatedValue": {
+          "type": "number"
+        },
+        "appointmentDate": {
+          "type": "string",
+          "minLength": 10,
+          "maxLength": 20,
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+        },
+        "timeSlot": {
+          "type": "string",
+          "minLength": 3,
+          "maxLength": 40
+        },
+        "status": {
+          "type": "string",
+          "enum": ["pending", "confirmed", "completed", "cancelled"]
+        },
+        "isPublicMetric": {
+          "type": "boolean"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "userId",
+        "bookingType",
+        "brandCategory",
+        "deviceTitle",
+        "estimatedValue",
+        "appointmentDate",
+        "timeSlot",
+        "status",
+        "isPublicMetric",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "UserProfile": {
+      "title": "UserProfile",
+      "description": "Non-PII registered user profile and analytics summary",
+      "type": "object",
+      "properties": {
+        "uid": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "displayName": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 80
+        },
+        "avatarInitials": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 4
+        },
+        "role": {
+          "type": "string",
+          "enum": ["customer", "admin"]
+        },
+        "isPublicProfile": {
+          "type": "boolean"
+        },
+        "totalBookings": {
+          "type": "integer"
+        },
+        "completedBookings": {
+          "type": "integer"
+        },
+        "cancelledBookings": {
+          "type": "integer"
+        },
+        "tradeInCount": {
+          "type": "integer"
+        },
+        "totalProjectedValue": {
+          "type": "number"
+        },
+        "preferredBrand": {
+          "type": "string",
+          "enum": ["all", "iphone", "samsung", "android"]
+        },
+        "lastActiveAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "uid",
+        "displayName",
+        "avatarInitials",
+        "role",
+        "isPublicProfile",
+        "totalBookings",
+        "completedBookings",
+        "cancelledBookings",
+        "tradeInCount",
+        "totalProjectedValue",
+        "preferredBrand",
+        "lastActiveAt",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "UserPrivate": {
+      "title": "UserPrivate",
+      "description": "Strictly isolated PII contact record for a user",
+      "type": "object",
+      "properties": {
+        "uid": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "email": {
+          "type": "string",
+          "minLength": 3,
+          "maxLength": 160
+        },
+        "phone": {
+          "type": "string",
+          "maxLength": 20
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": ["uid", "email", "phone", "createdAt", "updatedAt"]
+    },
+    "AdminRecord": {
+      "title": "AdminRecord",
+      "description": "Authorized store administrator lookup record",
+      "type": "object",
+      "properties": {
+        "uid": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "grantedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": ["uid", "grantedAt"]
+    }
+  },
+  "firestore": {
+    "/inventory/{itemId}": {
+      "schema": { "$ref": "#/entities/InventoryItem" },
+      "description": "A1 MOBILE live smartphone inventory items"
+    },
+    "/bookings/{bookingId}": {
+      "schema": { "$ref": "#/entities/Booking" },
+      "description": "Customer bookings, reservations, and trade-in appointments (contains PII)"
+    },
+    "/booking_metrics/{bookingId}": {
+      "schema": { "$ref": "#/entities/BookingMetric" },
+      "description": "Non-PII booking analytics records synchronized atomically with bookings"
+    },
+    "/user_profiles/{userId}": {
+      "schema": { "$ref": "#/entities/UserProfile" },
+      "description": "Non-PII registered user summary and analytics metrics"
+    },
+    "/user_private/{userId}": {
+      "schema": { "$ref": "#/entities/UserPrivate" },
+      "description": "Owner/Admin-only PII record containing email and phone"
+    },
+    "/admins/{userId}": {
+      "schema": { "$ref": "#/entities/AdminRecord" },
+      "description": "Authorized store admin UID registry"
+    }
+  }
+}
